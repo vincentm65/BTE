@@ -1,0 +1,3 @@
+set(__QT_DEPLOY_TARGET_BTE_FILE C:/BTE/Debug/BTE.exe)
+set(__QT_DEPLOY_TARGET_BTE_TYPE EXECUTABLE)
+set(__QT_DEPLOY_TARGET_BTE_RUNTIME_DLLS C:/vcpkg/installed/x64-windows/debug/bin/sqlite3.dll;C:/vcpkg/installed/x64-windows/debug/bin/Qt6Chartsd.dll;C:/vcpkg/installed/x64-windows/debug/bin/libcurl-d.dll;C:/vcpkg/installed/x64-windows/debug/bin/jsoncpp.dll;C:/vcpkg/installed/x64-windows/debug/bin/Qt6OpenGLWidgetsd.dll;C:/vcpkg/installed/x64-windows/debug/bin/Qt6Widgetsd.dll;C:/vcpkg/installed/x64-windows/debug/bin/Qt6OpenGLd.dll;C:/vcpkg/installed/x64-windows/debug/bin/Qt6Guid.dll;C:/vcpkg/installed/x64-windows/debug/bin/Qt6Cored.dll)
