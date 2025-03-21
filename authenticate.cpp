@@ -19,7 +19,6 @@
 // ------------------------
 // Helper Functions
 // ------------------------
-
 QString tokenFilePath = QDir(QCoreApplication::applicationDirPath()).filePath("tokens.txt");
 
 std::string urlDecode(const std::string& str) {

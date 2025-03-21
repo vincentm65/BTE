@@ -23,7 +23,7 @@ std::string fetchStockData(const std::string& ticker, const std::string& initial
     long httpCode = 0;
     std::string readBuffer;
     std::string url = "https://api.schwabapi.com/marketdata/v1/pricehistory?symbol="
-                      + ticker + "&periodType=month&period=1&frequencyType=daily&frequency=1";
+                      + ticker + "&periodType=year&period=5&frequencyType=daily&frequency=1";
 
     curl_global_init(CURL_GLOBAL_DEFAULT);
     curl = curl_easy_init();

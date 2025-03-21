@@ -87,13 +87,17 @@ void MainWindow::removeDuplicates_clicked()
 void MainWindow::queryStock_clicked()
 {
     QString ticker = ui->tickerInput->text().trimmed();
+
     if (ticker.isEmpty()) {
         ui->dataOutput->setText("Please enter a ticker symbol.");
         return;
     }
+
     std::string tickerStr = ticker.toStdString();
     std::ostringstream outputStream;
     std::streambuf* oldCout = std::cout.rdbuf(outputStream.rdbuf());
+
+    queryStock(DB, ticker.toStdString());
 
     std::cout.rdbuf(oldCout);
     ui->dataOutput->setPlainText(QString::fromStdString(outputStream.str()));  // Display result
