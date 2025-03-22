@@ -102,6 +102,7 @@ void MainWindow::queryStock_clicked()
     std::cout.rdbuf(oldCout);
     ui->dataOutput->setPlainText(QString::fromStdString(outputStream.str()));  // Display result
 
+
 }
 
 void MainWindow::authenticate_clicked()

@@ -6,7 +6,7 @@
 #include <algorithm>
 
 // Debug macro: define DEBUG_MODE to enable detailed logging; undefine for production
-#define DEBUG_MODE
+//#define DEBUG_MODE
 #ifdef DEBUG_MODE
 #define DEBUG_PRINT(x) std::cout << x << std::endl;
 #else
@@ -139,6 +139,7 @@ std::vector<TradeRecord> Backtest::run(std::vector<Data::Bar>& bars)
         DEBUG_PRINT("\nProcessing bar on " << bar.date << " (Close: $" << bar.close << ")");
 
         // --- Calculate the Moving Average using the Indicators class ---
+
         double ma = indicators.movingAverage(maPeriod, i);
         DEBUG_PRINT("Moving Average (" << maPeriod << "): " << ma);
 

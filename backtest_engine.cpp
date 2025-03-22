@@ -106,8 +106,8 @@ std::unordered_map<std::string, std::vector<Data::Bar>> loadAllData(sqlite3* db)
 
 void backtest_engine::runBacktest()
 {
-    QString tickerFilePath = "C:\\BTE\\build\\Desktop_Qt_6_8_2_MSVC2022_64bit-Debug\\universeSmall.csv";
-    QString dbPath = "C:\\BTE\\build\\Desktop_Qt_6_8_2_MSVC2022_64bit-Debug\\Universe_OHLCV.db";  // Adjust to your database path
+    QString tickerFilePath = "C:\\BTE\\build\\Desktop_Qt_6_10_0_MSVC2022_64bit-Debug\\universeSmall.csv";
+    QString dbPath = "C:\\BTE\\build\\Desktop_Qt_6_10_0_MSVC2022_64bit-Debug\\Universe_OHLCV.db";  // Adjust to your database path
 
     // Open the database with error checking
     if (!openDatabase(dbPath)) {
