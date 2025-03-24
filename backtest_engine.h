@@ -4,6 +4,16 @@
 #include <QWidget>
 #include <QStringList>
 #include <sqlite3.h>
+#include "backtest.h"
+
+
+// For Charts
+#include <QtCharts/QChartView>
+#include <QtCharts/QChart>
+#include <QtCharts/QLineSeries>
+#include <QtCharts/QDateTimeAxis>
+#include <QtCharts/QValueAxis>
+#include <QTableWidget>
 
 namespace Ui {
 class backtest_engine;
@@ -18,7 +28,6 @@ public:
     ~backtest_engine();
 
 private slots:
-    void loadTickersButton_Clicked();
     void runBacktestButton_Clicked();
 
 private:
@@ -32,6 +41,14 @@ private:
     // Backtesting methods
     void runBacktest();
     QStringList loadTickersFromCSV(const QString &filePath);
+
+    void populateProfitLossChart(const std::vector<TradeRecord>& trades);
+    void populateTradeDetailsTable(const std::vector<TradeRecord>& trades);
+
+    // New UI components
+    QChartView *profitChartView;
+    QTableWidget *tradeDetailsTable;
+
 
     struct AggregateStats {
         int totalTrades = 0;

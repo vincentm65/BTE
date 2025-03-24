@@ -12,13 +12,40 @@
 #include <sqlite3.h>
 #include <iostream>
 
+#include <QtCharts/QChartView>
+#include <QtCharts/QChart>
+#include <QtCharts/QLineSeries>
+#include <QtCharts/QDateTimeAxis>
+#include <QtCharts/QValueAxis>
+#include <QTableWidget>
+#include <QHeaderView>
+#include <QVBoxLayout>
+#include <QDateTime>
+
 backtest_engine::backtest_engine(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::backtest_engine)
     , db(nullptr)
 {
     ui->setupUi(this);
-    connect(ui->loadTickersButton, &QPushButton::clicked, this, &backtest_engine::loadTickersButton_Clicked);
+
+    profitChartView = new QChartView(new QChart(), this);
+    profitChartView->setMinimumHeight(200);  // Set a minimum height for visibility
+
+    tradeDetailsTable = new QTableWidget(this);
+    tradeDetailsTable->setColumnCount(5);
+    tradeDetailsTable->setHorizontalHeaderLabels(QStringList() << "Ticker" << "Buy Price" << "Sell Price" << "Profit/Loss" << "Buy Date" << "Sell Date");
+    tradeDetailsTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    tradeDetailsTable->setSortingEnabled(true);  // Enable column sorting by clicking on headers
+
+    // Integrate the new UI components into the existing layout.
+    // Try to get an existing vertical layout; if not found, create one.
+    if(ui->verticalLayout) {
+        ui->verticalLayout->addWidget(profitChartView);
+        ui->verticalLayout_2->addWidget(tradeDetailsTable);
+    }
+
+
     connect(ui->runBacktestButton, &QPushButton::clicked, this, &backtest_engine::runBacktestButton_Clicked);
 }
 
@@ -67,22 +94,26 @@ void backtest_engine::closeDatabase()
     }
 }
 
-void backtest_engine::loadTickersButton_Clicked()
-{
-    // Using a fixed file path for demonstration; consider using QFileDialog for production
-    QString filePath = "C:\\BTE\\build\\Desktop_Qt_6_8_2_MSVC2022_64bit-Debug\\universe.csv";
-    QStringList tickerList = loadTickersFromCSV(filePath);
-    ui->backtestOutput->setPlainText(tickerList.join(", "));
-}
-
-std::unordered_map<std::string, std::vector<Data::Bar>> loadAllData(sqlite3* db) {
+std::unordered_map<std::string, std::vector<Data::Bar>> loadAllData(sqlite3* db, int bars) {
     std::unordered_map<std::string, std::vector<Data::Bar>> allData;
-    const char* querySQL = "SELECT open, high, low, close, volume, ticker, date FROM Stocks;";
+    const char* querySQL = "SELECT open, high, low, close, volume, ticker, date FROM ("
+                           "  SELECT open, high, low, close, volume, ticker, date, "
+                           "         ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY date(date) DESC) as rn "
+                           "  FROM Stocks"
+                           ") WHERE rn <= ? ORDER BY ticker, date;";
     sqlite3_stmt* stmt = nullptr;
     if (sqlite3_prepare_v2(db, querySQL, -1, &stmt, NULL) != SQLITE_OK) {
         std::cerr << "Error preparing query: " << sqlite3_errmsg(db) << std::endl;
         return allData;
     }
+
+    // Bind the max bars value to the first placeholder.
+    if (sqlite3_bind_int(stmt, 1, bars) != SQLITE_OK) {
+        std::cerr << "Error binding parameter: " << sqlite3_errmsg(db) << std::endl;
+        sqlite3_finalize(stmt);
+        return allData;
+    }
+
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         Data::Bar bar;
         bar.open = sqlite3_column_double(stmt, 0);
@@ -104,10 +135,11 @@ std::unordered_map<std::string, std::vector<Data::Bar>> loadAllData(sqlite3* db)
     return allData;
 }
 
+
 void backtest_engine::runBacktest()
 {
-    QString tickerFilePath = "C:\\BTE\\build\\Desktop_Qt_6_10_0_MSVC2022_64bit-Debug\\universeSmall.csv";
-    QString dbPath = "C:\\BTE\\build\\Desktop_Qt_6_10_0_MSVC2022_64bit-Debug\\Universe_OHLCV.db";  // Adjust to your database path
+    QString tickerFilePath = "C:\\BTE\\build\\Desktop_Qt_6_8_2_MSVC2022_64bit-Debug\\universeSmall.csv";
+    QString dbPath = "C:\\BTE\\build\\Desktop_Qt_6_8_2_MSVC2022_64bit-Debug\\Universe_OHLCV.db";  // Adjust to your database path
 
     // Open the database with error checking
     if (!openDatabase(dbPath)) {
@@ -115,11 +147,21 @@ void backtest_engine::runBacktest()
         return;
     }
 
-    auto allData = loadAllData(db);
+    int maxBars = ui->enterMaxBars->text().toInt();
+    if (maxBars <= 0) {
+        // Handle invalid input by providing a default value (e.g., 100)
+        qWarning() << "Invalid max bars input. Using default value 100.";
+        maxBars = 100;
+    }
+
+    auto allData = loadAllData(db, maxBars);
     QStringList tickerList = loadTickersFromCSV(tickerFilePath);
 
     // Initialize aggregate statistics
     AggregateStats aggStats;
+
+    // Container for all trades to be displayed in the chart and table
+    std::vector<TradeRecord> allTrades;
 
     // Process each ticker
     for (const QString &ticker : tickerList) {
@@ -128,6 +170,9 @@ void backtest_engine::runBacktest()
         if (it != allData.end()) {
             Backtest backtest;
             std::vector<TradeRecord> trades = backtest.run(it->second);
+
+            allTrades.insert(allTrades.end(), trades.begin(), trades.end());
+
             // Update aggregate statistics from each ticker's trades
             for (const auto& trade : trades) {
                 aggStats.totalTrades++;
@@ -144,6 +189,9 @@ void backtest_engine::runBacktest()
         }
     }
 
+    populateProfitLossChart(allTrades);
+    populateTradeDetailsTable(allTrades);
+
     // Format the aggregate stats into a QString to output to the UI element
     QString resultText = QString("Backtesting completed: \n\nTotal Trades: %1\nTotal Profit: $%2\nWins: %3\nLosses: %4")
                              .arg(aggStats.totalTrades)
@@ -158,4 +206,71 @@ void backtest_engine::runBacktest()
 void backtest_engine::runBacktestButton_Clicked()
 {
     runBacktest();
+}
+
+
+void backtest_engine::populateProfitLossChart(const std::vector<TradeRecord>& trades)
+{
+    // Create a new line series for cumulative profit/loss
+    QLineSeries *series = new QLineSeries();
+    double cumulativeProfit = 0.0;
+
+    // Sort trades by date (assuming trade.date is in "yyyy-MM-dd" format)
+    std::vector<TradeRecord> sortedTrades = trades;
+    std::sort(sortedTrades.begin(), sortedTrades.end(), [](const TradeRecord &a, const TradeRecord &b) {
+        return QString::fromStdString(a.sellDate) < QString::fromStdString(b.sellDate);
+    });
+
+    // Add data points to the series
+    for (const auto &trade : sortedTrades) {
+        cumulativeProfit += (trade.sellPrice - trade.buyPrice);
+        QDateTime date = QDateTime::fromString(QString::fromStdString(trade.sellDate), "yyyy-MM-dd");
+        if (!date.isValid()) {
+            // Fallback: use current date if parsing fails
+            date = QDateTime::currentDateTime();
+        }
+        series->append(date.toMSecsSinceEpoch(), cumulativeProfit);
+    }
+
+    // Configure the chart
+    QChart *chart = profitChartView->chart();
+    chart->removeAllSeries();
+    chart->addSeries(series);
+    chart->setTitle("Cumulative Profit/Loss Over Time");
+    chart->legend()->hide();
+
+    // Setup x-axis as a date/time axis
+    QDateTimeAxis *axisX = new QDateTimeAxis;
+    axisX->setFormat("yyyy-MM-dd");
+    axisX->setTitleText("Date");
+    chart->addAxis(axisX, Qt::AlignBottom);
+    series->attachAxis(axisX);
+
+    // Setup y-axis as a value axis
+    QValueAxis *axisY = new QValueAxis;
+    axisY->setTitleText("Cumulative Profit/Loss");
+    chart->addAxis(axisY, Qt::AlignLeft);
+    series->attachAxis(axisY);
+
+    // Enable antialiasing for smoother lines
+    profitChartView->setRenderHint(QPainter::Antialiasing);
+}
+
+// --------------------------------------------------------------------
+// Helper function to populate the trade details table
+// --------------------------------------------------------------------
+void backtest_engine::populateTradeDetailsTable(const std::vector<TradeRecord>& trades)
+{
+    tradeDetailsTable->setRowCount(static_cast<int>(trades.size()));
+    int row = 0;
+    for (const auto &trade : trades) {
+        tradeDetailsTable->setItem(row, 0, new QTableWidgetItem(QString::fromStdString(trade.ticker)));
+        tradeDetailsTable->setItem(row, 1, new QTableWidgetItem(QString::number(trade.buyPrice, 'f', 2)));
+        tradeDetailsTable->setItem(row, 2, new QTableWidgetItem(QString::number(trade.sellPrice, 'f', 2)));
+        double profitLoss = trade.sellPrice - trade.buyPrice;
+        tradeDetailsTable->setItem(row, 3, new QTableWidgetItem(QString::number(profitLoss, 'f', 2)));
+        tradeDetailsTable->setItem(row, 4, new QTableWidgetItem(QString::fromStdString(trade.buyDate)));
+        tradeDetailsTable->setItem(row, 5, new QTableWidgetItem(QString::fromStdString(trade.sellDate)));
+        row++;
+    }
 }

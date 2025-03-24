@@ -20,8 +20,6 @@ public:
         std::string ticker;
         std::string date;
     };
-
-    std::vector<Bar> queryStockForBT(sqlite3* DB, std::string ticker);
 };
 
 // Indicator class
