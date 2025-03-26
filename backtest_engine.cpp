@@ -33,8 +33,8 @@ backtest_engine::backtest_engine(QWidget *parent)
     profitChartView->setMinimumHeight(200);  // Set a minimum height for visibility
 
     tradeDetailsTable = new QTableWidget(this);
-    tradeDetailsTable->setColumnCount(5);
-    tradeDetailsTable->setHorizontalHeaderLabels(QStringList() << "Ticker" << "Buy Price" << "Sell Price" << "Profit/Loss" << "Buy Date" << "Sell Date");
+    tradeDetailsTable->setColumnCount(7);
+    tradeDetailsTable->setHorizontalHeaderLabels(QStringList() << "Ticker" << "Buy Price" << "Sell Price" << "Quantity" << "Profit/Loss" << "Buy Date" << "Sell Date");
     tradeDetailsTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     tradeDetailsTable->setSortingEnabled(true);  // Enable column sorting by clicking on headers
 
@@ -167,6 +167,7 @@ void backtest_engine::runBacktest()
     for (const QString &ticker : tickerList) {
         std::string tickerStr = ticker.toStdString();
         auto it = allData.find(tickerStr);
+
         if (it != allData.end()) {
             Backtest backtest;
             std::vector<TradeRecord> trades = backtest.run(it->second);
@@ -176,7 +177,8 @@ void backtest_engine::runBacktest()
             // Update aggregate statistics from each ticker's trades
             for (const auto& trade : trades) {
                 aggStats.totalTrades++;
-                double profit = trade.sellPrice - trade.buyPrice;
+                double profit = (trade.sellPrice - trade.buyPrice) * trade.quantity;
+                qDebug() << trade.sellPrice << " " << trade.buyPrice << " "  << trade.quantity << " " << profit;
                 aggStats.totalProfit += profit;
                 if (profit > 0) {
                     aggStats.wins++;
@@ -267,10 +269,11 @@ void backtest_engine::populateTradeDetailsTable(const std::vector<TradeRecord>& 
         tradeDetailsTable->setItem(row, 0, new QTableWidgetItem(QString::fromStdString(trade.ticker)));
         tradeDetailsTable->setItem(row, 1, new QTableWidgetItem(QString::number(trade.buyPrice, 'f', 2)));
         tradeDetailsTable->setItem(row, 2, new QTableWidgetItem(QString::number(trade.sellPrice, 'f', 2)));
-        double profitLoss = trade.sellPrice - trade.buyPrice;
-        tradeDetailsTable->setItem(row, 3, new QTableWidgetItem(QString::number(profitLoss, 'f', 2)));
-        tradeDetailsTable->setItem(row, 4, new QTableWidgetItem(QString::fromStdString(trade.buyDate)));
-        tradeDetailsTable->setItem(row, 5, new QTableWidgetItem(QString::fromStdString(trade.sellDate)));
+        tradeDetailsTable->setItem(row, 3, new QTableWidgetItem(QString::number(trade.quantity, 'f', 2)));
+        double profitLoss = (trade.sellPrice - trade.buyPrice) * trade.quantity;
+        tradeDetailsTable->setItem(row, 4, new QTableWidgetItem(QString::number(profitLoss, 'f', 2)));
+        tradeDetailsTable->setItem(row, 5, new QTableWidgetItem(QString::fromStdString(trade.buyDate)));
+        tradeDetailsTable->setItem(row, 6, new QTableWidgetItem(QString::fromStdString(trade.sellDate)));
         row++;
     }
 }

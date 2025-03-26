@@ -30,6 +30,7 @@ public:
     Indicators(const std::vector<Data::Bar>& bars);
 
     double movingAverage(int length, size_t endIndex);
+    double adr(int length);
 
 private:
     std::vector<Data::Bar> bars_;
@@ -79,6 +80,7 @@ struct TradeRecord {
     std::string sellDate;
     double buyPrice;
     double sellPrice;
+    double quantity;
 };
 
 // Backtest class to orchestrate the simulation
