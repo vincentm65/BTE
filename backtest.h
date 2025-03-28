@@ -31,6 +31,7 @@ public:
 
     double movingAverage(int length, size_t endIndex);
     double adr(int length, size_t endIndex);
+    double avgVolume(int length, size_t endIndex);
 
 private:
     std::vector<Data::Bar> bars_;

@@ -223,7 +223,7 @@ void backtest_engine::populateProfitLossChart(const std::vector<TradeRecord>& tr
 
     // Add data points to the series
     for (const auto &trade : sortedTrades) {
-        cumulativeProfit += (trade.sellPrice - trade.buyPrice);
+        cumulativeProfit += (trade.sellPrice - trade.buyPrice) * trade.quantity;
         QDateTime date = QDateTime::fromString(QString::fromStdString(trade.sellDate), "yyyy-MM-dd");
         if (!date.isValid()) {
             // Fallback: use current date if parsing fails
