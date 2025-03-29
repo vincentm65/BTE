@@ -12,7 +12,7 @@ set(Qt6_DIR "C:/vcpkg/installed/x64-windows/share/Qt6")
 set(Qt6Charts_DIR "C:/vcpkg/installed/x64-windows/share/Qt6Charts")
 
 # Find Qt6 (including Charts)
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Charts HINTS "${CMAKE_PREFIX_PATH}/share/Qt6")
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Charts Concurrent HINTS "${CMAKE_PREFIX_PATH}/share/Qt6")
 
 # Qt6 setup
 qt_standard_project_setup()
@@ -63,6 +63,7 @@ target_link_libraries(BTE PRIVATE
     Qt6::Gui
     Qt6::Widgets
     Qt6::Charts
+    Qt6::Concurrent
 )
 
 target_link_libraries(BTE PRIVATE
